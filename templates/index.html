@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISS Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map { height: 400px; }
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            flex: 1;
+            width: 80%;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #333;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            background-color: #fff;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            flex: 1;
+        }
+        .footer {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>International Space Station Tracker</h1>
+        </div>
+        <div class="content">
+            <p id="astronauts-info">{{ info }}</p>
+            <p id="info">Loading...</p>
+            <div id="map"></div>
+            <button id="updateButton">Update Location</button>
+        </div>
+    </div>
+    <div class="footer">
+        <p>© 2024 ISS Tracker. All rights reserved.</p>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Check if Leaflet is loaded before executing the script
+        if (window.L) {
+            initMap();
+        } else {
+            document.write('<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"><\/script>');
+        }
+
+        function initMap() {
+            var mymap = L.map('map').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(mymap);
+
+            var issIcon = L.icon({
+                iconUrl: "data:image/jpeg;base64,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",
+                iconSize: [40, 40] // Set the width and height of the icon
+            });
+
+            var marker = L.marker([0, 0], {icon: issIcon}).addTo(mymap);
+
+            function updateISSLocation() {
+                fetch('https://api.wheretheiss.at/v1/satellites/25544')
+                .then(response => response.json())
+                .then(data => {
+                    var {latitude, longitude} = data;
+                    marker.setLatLng([latitude, longitude]);
+                    mymap.setView([latitude, longitude], mymap.getZoom());
+                    document.getElementById('info').textContent = `Latitude: ${latitude.toFixed(2)}, Longitude: ${longitude.toFixed(2)}`;
+                })
+                .catch(error => console.error('Error fetching ISS location:', error));
+            }
+
+            // Update ISS location initially
+            updateISSLocation();
+
+            // Add event listener to the button
+            document.getElementById('updateButton').addEventListener('click', updateISSLocation);
+        }
+    </script>
+</body>
+</html>
